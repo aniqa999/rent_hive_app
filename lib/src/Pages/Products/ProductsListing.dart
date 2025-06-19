@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 //import 'package:carousel_slider/carousel_slider.dart';
 //import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../models/Products.dart';
@@ -27,66 +28,97 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class ProductsPage extends StatelessWidget {
-  final List<Product> products = [
-    Product(
-      imageURL: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c",
-      price: 29.99,
-      title: "Delicious Meal",
-      description: "Beautifully prepared healthy meal",
-      category: "Food",
-      createdAt: DateTime.now(),
-    ),
-    Product(
-      imageURL: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1",
-      price: 19.99,
-      title: "Grilled Steak",
-      description: "Juicy grilled steak with herbs",
-      category: "Food",
-      createdAt: DateTime.now(),
-    ),
-    Product(
-      imageURL: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38",
-      price: 15.50,
-      title: "Pizza Margherita",
-      description: "Classic Italian pizza",
-      category: "Food",
-      createdAt: DateTime.now(),
-    ),
-    Product(
-      imageURL: "https://images.unsplash.com/photo-1565958011703-44f9829ba187",
-      price: 12.75,
-      title: "Fresh Salad",
-      description: "Healthy salad with avocado",
-      category: "Food",
-      createdAt: DateTime.now(),
-    ),
-  ];
-
-  final List<Category> categories = [
-    Category(name: "Sports", iconURL: "assets/sports.png"),
-    Category(name: "Vehicles", iconURL: "assets/vehicles.png"),
-    Category(name: "Properties", iconURL: "assets/properties.png"),
-    Category(name: "Camera", iconURL: "assets/camera.png"),
-    Category(name: "Laptops", iconURL: "assets/laptops.png"),
-  ];
-
+class ProductsPage extends StatefulWidget {
   ProductsPage({super.key});
+
+  @override
+  State<ProductsPage> createState() => _ProductsPageState();
+}
+
+class _ProductsPageState extends State<ProductsPage> {
+  List<Product> _allProducts = [];
+  List<Category> _categories = [];
+  String _selectedCategory = 'All';
+  String _searchQuery = '';
+  bool _isLoading = true;
+  TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    setState(() => _isLoading = true);
+    try {
+      // Fetch categories
+      final catSnapshot =
+          await FirebaseFirestore.instance.collection('categories').get();
+      final categories =
+          catSnapshot.docs
+              .map((doc) => Category.fromMap(doc.data(), doc.id))
+              .toList();
+      // Fetch products
+      final prodSnapshot =
+          await FirebaseFirestore.instance.collection('products').get();
+      final products =
+          prodSnapshot.docs
+              .map((doc) => Product.fromMap(doc.data(), doc.id))
+              .toList();
+      setState(() {
+        _categories = categories;
+        _allProducts = products;
+        _isLoading = false;
+        _selectedCategory = 'All';
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  List<Product> get _filteredProducts {
+    List<Product> filtered = _allProducts;
+    if (_selectedCategory != 'All') {
+      filtered =
+          filtered.where((p) => p.category == _selectedCategory).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      filtered =
+          filtered
+              .where(
+                (p) =>
+                    p.title.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ) ||
+                    p.description.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ),
+              )
+              .toList();
+    }
+    return filtered;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF3F4F6),
+      backgroundColor: const Color(0xFFF3F4F6),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextField(
+              controller: _searchController,
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val;
+                });
+              },
               decoration: InputDecoration(
                 hintText: 'Search here...',
-                prefixIcon: Icon(Icons.search, color: Colors.deepPurple),
-                suffixIcon: Icon(Icons.camera_alt, color: Colors.deepPurple),
+                prefixIcon: const Icon(Icons.search, color: Colors.deepPurple),
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -95,40 +127,90 @@ class ProductsPage extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 20),
+            const Text(
               'Categories',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 20),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                spacing: 20.0,
-                children: [
-                  for (int i = 0; i < categories.length; i++)
-                    CategoryChip(cat: categories[i]),
-                ],
-              ),
-            ),
-            SizedBox(height: 20),
-            Text(
-              'Best Selling',
+            const SizedBox(height: 20),
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: GestureDetector(
+                          onTap:
+                              () => setState(() => _selectedCategory = 'All'),
+                          child: Chip(
+                            label: const Text('All'),
+                            backgroundColor:
+                                _selectedCategory == 'All'
+                                    ? Colors.deepPurple
+                                    : Colors.white,
+                            labelStyle: TextStyle(
+                              color:
+                                  _selectedCategory == 'All'
+                                      ? Colors.white
+                                      : Colors.deepPurple,
+                            ),
+                            padding: const EdgeInsets.all(10.0),
+                          ),
+                        ),
+                      ),
+                      for (int i = 0; i < _categories.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: GestureDetector(
+                            onTap:
+                                () => setState(
+                                  () => _selectedCategory = _categories[i].name,
+                                ),
+                            child: CategoryChip(
+                              cat: _categories[i],
+                              isSelected:
+                                  _categories[i].name == _selectedCategory,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            const SizedBox(height: 20),
+            const Text(
+              'Products',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Expanded(
-              child: GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.7,
-                ),
-                itemCount: products.length,
-                itemBuilder:
-                    (context, index) => ProductCard(product: products[index]),
-              ),
+              child:
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _filteredProducts.isEmpty
+                      ? Center(
+                        child: Text(
+                          'No product found in that category',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      )
+                      : GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              childAspectRatio: 0.7,
+                            ),
+                        itemCount: _filteredProducts.length,
+                        itemBuilder:
+                            (context, index) =>
+                                ProductCard(product: _filteredProducts[index]),
+                      ),
             ),
           ],
         ),

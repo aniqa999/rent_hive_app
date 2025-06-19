@@ -99,7 +99,7 @@ class _CategoriesListingScreenState extends State<CategoriesListingScreen>
             crossAxisCount: 2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 0.7,
+            childAspectRatio: 0.8,
           ),
           itemCount: _filteredCategories.length,
           itemBuilder: (context, index) {
@@ -209,9 +209,10 @@ class _CategoriesListingScreenState extends State<CategoriesListingScreen>
                               context,
                             ).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: isDarkTheme
-                                  ? Colors.white
-                                  : const Color(0xFF1F2937),
+                              color:
+                                  isDarkTheme
+                                      ? Colors.white
+                                      : const Color(0xFF1F2937),
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
