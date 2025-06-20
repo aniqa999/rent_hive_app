@@ -7,6 +7,7 @@ import '../../models/Products.dart';
 import '../../models/Category.dart';
 import '../../Components/CategoryChip.dart';
 import '../../Components/ProductCard.dart';
+import '../../Components/ProductDetailsSheet.dart';
 
 void main() {
   runApp(MyApp());
@@ -208,8 +209,22 @@ class _ProductsPageState extends State<ProductsPage> {
                             ),
                         itemCount: _filteredProducts.length,
                         itemBuilder:
-                            (context, index) =>
-                                ProductCard(product: _filteredProducts[index]),
+                            (context, index) => GestureDetector(
+                              onTap: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder:
+                                      (context) => ProductDetailsSheet(
+                                        product: _filteredProducts[index],
+                                      ),
+                                );
+                              },
+                              child: ProductCard(
+                                product: _filteredProducts[index],
+                              ),
+                            ),
                       ),
             ),
           ],

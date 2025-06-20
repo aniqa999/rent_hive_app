@@ -4,7 +4,8 @@ import 'package:rent_hive_app/src/Pages/Products/ProductsListing.dart';
 import '../../models/Category.dart';
 
 class Categorysection extends StatefulWidget {
-  const Categorysection({super.key});
+  final VoidCallback? onViewAll;
+  const Categorysection({super.key, this.onViewAll});
 
   @override
   State<Categorysection> createState() => _CategorysectionState();
@@ -156,12 +157,7 @@ class _CategorysectionState extends State<Categorysection> {
                 ),
               ),
               GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ProductsPage()),
-                  );
-                },
+                onTap: widget.onViewAll,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,

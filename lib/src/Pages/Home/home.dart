@@ -4,6 +4,7 @@ import 'package:rent_hive_app/src/Components/HomePage/CarouselSlider.dart';
 import 'package:rent_hive_app/src/Components/HomePage/CategorySection.dart';
 import 'package:rent_hive_app/src/Components/HomePage/PopularProducts.dart';
 import 'package:rent_hive_app/src/Components/HomePage/SearchComponent.dart';
+import 'package:rent_hive_app/src/Pages/Structure/Structure.dart';
 import 'package:rent_hive_app/src/models/Products.dart';
 
 // void main() {
@@ -88,7 +89,20 @@ class _RentHiveHomePageState extends State<RentHiveHomePage> {
 
           const SizedBox(height: 20),
 
-          Categorysection(),
+          Categorysection(
+            onViewAll: () {
+              // Find the page controller and switch to the categories page (index 1)
+              final mainScreenState =
+                  context.findAncestorStateOfType<MainScreenState>();
+              if (mainScreenState != null) {
+                mainScreenState.pageController.animateToPage(
+                  1,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              }
+            },
+          ),
 
           const SizedBox(height: 20),
 

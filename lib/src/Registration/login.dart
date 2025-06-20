@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rent_hive_app/src/Pages/Structure/Structure.dart';
 import 'package:rent_hive_app/src/Registration/signup.dart';
 import 'package:rent_hive_app/src/admin/adminlogin.dart';
+import 'package:rent_hive_app/src/Registration/forgot_password_screen.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -31,11 +32,16 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    print("Attempting to sign in with email: $email");
+    print("Password length: ${password.length} characters");
+
     try {
-      await _auth.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+
+      print("Login successful for user: ${_auth.currentUser?.uid}");
 
       // Navigate to main screen on successful login
       Navigator.pushReplacement(
@@ -43,13 +49,16 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (context) => MainScreen()),
       );
     } on FirebaseAuthException catch (e) {
+      print(
+        "Firebase Auth Error during login: Code: ${e.code}, Message: ${e.message}",
+      );
       String errorMessage;
       switch (e.code) {
         case 'user-not-found':
           errorMessage = 'No user found with this email.';
           break;
         case 'wrong-password':
-          errorMessage = 'Wrong password provided.';
+          errorMessage = 'Wrong password provided. Please check your password.';
           break;
         case 'invalid-email':
           errorMessage = 'Invalid email address.';
@@ -57,41 +66,25 @@ class _LoginPageState extends State<LoginPage> {
         case 'user-disabled':
           errorMessage = 'This user account has been disabled.';
           break;
+        case 'too-many-requests':
+          errorMessage =
+              'Too many failed login attempts. Please try again later.';
+          break;
+        case 'network-request-failed':
+          errorMessage =
+              'Network error. Please check your internet connection.';
+          break;
         default:
-          errorMessage = 'Login failed. Please try again.';
+          errorMessage = 'Login failed. Error: ${e.code} - ${e.message}';
       }
       _showErrorDialog(errorMessage);
     } catch (e) {
-      _showErrorDialog('An error occurred. Please try again.');
+      print("Unexpected error during login: $e");
+      _showErrorDialog('An unexpected error occurred. Please try again.');
     } finally {
       setState(() {
         _isLoading = false;
       });
-    }
-  }
-
-  Future<void> _resetPassword() async {
-    if (_emailController.text.isEmpty) {
-      _showErrorDialog('Please enter your email address first');
-      return;
-    }
-
-    try {
-      await _auth.sendPasswordResetEmail(email: _emailController.text.trim());
-      _showSuccessDialog('Password reset email sent! Check your inbox.');
-    } on FirebaseAuthException catch (e) {
-      String errorMessage;
-      switch (e.code) {
-        case 'user-not-found':
-          errorMessage = 'No user found with this email.';
-          break;
-        case 'invalid-email':
-          errorMessage = 'Invalid email address.';
-          break;
-        default:
-          errorMessage = 'Failed to send reset email. Please try again.';
-      }
-      _showErrorDialog(errorMessage);
     }
   }
 
@@ -117,16 +110,35 @@ class _LoginPageState extends State<LoginPage> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: Text('Success'),
+            title: const Text('Success'),
             content: Text(message),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('OK'),
+                child: const Text('OK'),
               ),
             ],
           ),
     );
+  }
+
+  // Add password validation helper
+  void _validatePassword() {
+    final password = _passwordController.text;
+    print("Password validation:");
+    print("- Length: ${password.length} characters");
+    print("- Contains uppercase: ${password.contains(RegExp(r'[A-Z]'))}");
+    print("- Contains lowercase: ${password.contains(RegExp(r'[a-z]'))}");
+    print("- Contains numbers: ${password.contains(RegExp(r'[0-9]'))}");
+    print(
+      "- Contains special chars: ${password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))}",
+    );
+
+    if (password.length < 6) {
+      _showErrorDialog('Password must be at least 6 characters long');
+    } else {
+      _showSuccessDialog('Password format looks good!');
+    }
   }
 
   @override
@@ -251,18 +263,42 @@ class _LoginPageState extends State<LoginPage> {
                                       Icons.lock,
                                       color: Color.fromRGBO(143, 148, 251, 1),
                                     ),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscurePassword
-                                            ? Icons.visibility
-                                            : Icons.visibility_off,
-                                        color: Color.fromRGBO(143, 148, 251, 1),
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _obscurePassword = !_obscurePassword;
-                                        });
-                                      },
+                                    suffixIcon: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(
+                                            _obscurePassword
+                                                ? Icons.visibility
+                                                : Icons.visibility_off,
+                                            color: Color.fromRGBO(
+                                              143,
+                                              148,
+                                              251,
+                                              1,
+                                            ),
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _obscurePassword =
+                                                  !_obscurePassword;
+                                            });
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: Icon(
+                                            Icons.info_outline,
+                                            color: Color.fromRGBO(
+                                              143,
+                                              148,
+                                              251,
+                                              1,
+                                            ),
+                                          ),
+                                          onPressed: _validatePassword,
+                                          tooltip: 'Validate Password',
+                                        ),
+                                      ],
                                     ),
                                     border: InputBorder.none,
                                     hintText: "Password",
@@ -342,7 +378,15 @@ class _LoginPageState extends State<LoginPage> {
                     FadeInUp(
                       duration: Duration(milliseconds: 2000),
                       child: GestureDetector(
-                        onTap: _resetPassword,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => const ForgotPasswordScreen(),
+                            ),
+                          );
+                        },
                         child: Text(
                           "Forgot Password?",
                           style: TextStyle(

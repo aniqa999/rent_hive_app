@@ -44,11 +44,11 @@ class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<MainScreen> createState() => MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  final PageController _pageController = PageController();
+class MainScreenState extends State<MainScreen> {
+  final PageController pageController = PageController();
 
   final List<Widget> _screens = [
     RentHiveHomePage(),
@@ -59,7 +59,7 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    _pageController.dispose();
+    pageController.dispose();
     super.dispose();
   }
 
@@ -87,8 +87,8 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       drawer: const AppDrawer(),
-      body: PageView(controller: _pageController, children: _screens),
-      bottomNavigationBar: Bottomnavigation(pageController: _pageController),
+      body: PageView(controller: pageController, children: _screens),
+      bottomNavigationBar: Bottomnavigation(pageController: pageController),
     );
   }
 }
