@@ -27,7 +27,6 @@ class _AddProductScreenState extends State<AddProductScreen>
   final _descriptionController = TextEditingController();
   String _selectedCategory = 'Electronics';
   bool _isLoading = false;
-  bool _isDragOver = false;
   String? _selectedImagePath;
   final _imagePicker = ImagePicker();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -175,7 +174,7 @@ class _AddProductScreenState extends State<AddProductScreen>
                                     decoration: BoxDecoration(
                                       color: const Color(
                                         0xFF6366F1,
-                                      ).withOpacity(0.3),
+                                      ).withAlpha((255 * 0.3).toInt()),
                                     ),
                                     child: const Center(
                                       child: Icon(
@@ -197,69 +196,6 @@ class _AddProductScreenState extends State<AddProductScreen>
             ),
           ),
     );
-  }
-
-  Future<void> _pickImage() async {
-    try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-      );
-      if (image != null) {
-        setState(() {
-          _selectedImagePath = image.path;
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking image: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _handleDroppedFile(dynamic data) async {
-    setState(() {
-      _isDragOver = false;
-    });
-
-    try {
-      if (data is List<dynamic> && data.isNotEmpty) {
-        final filePath = data.first.toString();
-        if (filePath.toLowerCase().contains('.jpg') ||
-            filePath.toLowerCase().contains('.jpeg') ||
-            filePath.toLowerCase().contains('.png') ||
-            filePath.toLowerCase().contains('.gif') ||
-            filePath.toLowerCase().contains('.webp')) {
-          setState(() {
-            _selectedImagePath = filePath;
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Image dropped successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please drop an image file (JPG, PNG, GIF, WEBP)'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error processing dropped file: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   Future<String?> _uploadImageToCloudinary() async {
@@ -381,8 +317,6 @@ class _AddProductScreenState extends State<AddProductScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -453,7 +387,7 @@ class _AddProductScreenState extends State<AddProductScreen>
           color: Theme.of(context).cardColor,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withAlpha((255 * 0.1).toInt()),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -513,7 +447,10 @@ class _AddProductScreenState extends State<AddProductScreen>
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withOpacity(0.3)],
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withAlpha((255 * 0.3).toInt()),
+                    ],
                   ),
                 ),
               ),
@@ -526,7 +463,7 @@ class _AddProductScreenState extends State<AddProductScreen>
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
+                    color: Colors.black.withAlpha((255 * 0.7).toInt()),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -547,7 +484,7 @@ class _AddProductScreenState extends State<AddProductScreen>
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withAlpha((255 * 0.7).toInt()),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: IconButton(
@@ -560,17 +497,6 @@ class _AddProductScreenState extends State<AddProductScreen>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // Container(
-                    //   decoration: BoxDecoration(
-                    //     color: Colors.black.withOpacity(0.7),
-                    //     borderRadius: BorderRadius.circular(20),
-                    //   ),
-                    //   child: IconButton(
-                    //     icon: const Icon(Icons.camera_alt, color: Colors.white),
-                    //     onPressed: _pickImage,
-                    //     tooltip: 'Pick from Gallery',
-                    //   ),
-                    // ),
                   ],
                 ),
               ),
@@ -662,7 +588,7 @@ class _AddProductScreenState extends State<AddProductScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha((255 * 0.05).toInt()),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -699,7 +625,7 @@ class _AddProductScreenState extends State<AddProductScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withAlpha((255 * 0.05).toInt()),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -771,7 +697,7 @@ class _AddProductScreenState extends State<AddProductScreen>
             backgroundColor: const Color(0xFF6366F1),
             foregroundColor: Colors.white,
             elevation: 4,
-            shadowColor: const Color(0xFF6366F1).withOpacity(0.3),
+            shadowColor: const Color(0xFF6366F1).withAlpha((255 * 0.3).toInt()),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),

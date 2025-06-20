@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
 }
 
 class ProductsPage extends StatefulWidget {
-  ProductsPage({super.key});
+  const ProductsPage({super.key});
 
   @override
   State<ProductsPage> createState() => _ProductsPageState();
@@ -42,7 +42,7 @@ class _ProductsPageState extends State<ProductsPage> {
   String _selectedCategory = 'All';
   String _searchQuery = '';
   bool _isLoading = true;
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -62,7 +62,10 @@ class _ProductsPageState extends State<ProductsPage> {
               .toList();
       // Fetch products
       final prodSnapshot =
-          await FirebaseFirestore.instance.collection('products').get();
+          await FirebaseFirestore.instance
+              .collection('products')
+              .where('status', isEqualTo: 'available')
+              .get();
       final products =
           prodSnapshot.docs
               .map((doc) => Product.fromMap(doc.data(), doc.id))

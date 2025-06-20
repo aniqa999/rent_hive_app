@@ -7,6 +7,7 @@ class Product {
   final String title;
   final String description;
   final String category;
+  final String status;
   final DateTime createdAt;
 
   Product({
@@ -16,6 +17,7 @@ class Product {
     required this.title,
     required this.description,
     required this.category,
+    this.status = 'available',
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -28,6 +30,7 @@ class Product {
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       category: map['category'] ?? '',
+      status: map['status'] ?? 'available',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
@@ -40,6 +43,7 @@ class Product {
       'title': title,
       'description': description,
       'category': category,
+      'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -52,6 +56,7 @@ class Product {
     String? title,
     String? description,
     String? category,
+    String? status,
     DateTime? createdAt,
   }) {
     return Product(
@@ -61,6 +66,7 @@ class Product {
       title: title ?? this.title,
       description: description ?? this.description,
       category: category ?? this.category,
+      status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
     );
   }

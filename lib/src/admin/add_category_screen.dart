@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/Category.dart';
@@ -25,7 +24,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
   final _nameController = TextEditingController();
   bool _isLoading = false;
   String? _selectedIconPath;
-  final _imagePicker = ImagePicker();
+  // Removed unused _imagePicker field
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Dynamic list of available category icons
@@ -67,9 +66,9 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
         availableIcons = categoryIconAssets;
       });
 
-      print('Loaded ${availableIcons.length} category icons');
+      debugPrint('Loaded ${availableIcons.length} category icons');
     } catch (e) {
-      print('Error loading category icons: $e');
+      debugPrint('Error loading category icons: $e');
       // Fallback to manual list if automatic loading fails
       setState(() {
         availableIcons = [
@@ -205,7 +204,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
                                     decoration: BoxDecoration(
                                       color: const Color(
                                         0xFF6366F1,
-                                      ).withOpacity(0.3),
+                                      ).withValues(alpha: 0.3),
                                     ),
                                     child: const Center(
                                       child: Icon(
@@ -229,36 +228,17 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
     );
   }
 
-  Future<void> _pickIcon() async {
-    try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-      );
-      if (image != null) {
-        setState(() {
-          _selectedIconPath = image.path;
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error picking icon: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
   Future<String?> _uploadIconToCloudinary() async {
     try {
       if (_selectedIconPath == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select an icon first'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please select an icon first'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
         return null;
       }
 
@@ -296,23 +276,27 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
         final resJson = json.decode(resStr);
         return resJson['secure_url'];
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error uploading icon to Cloudinary: ${response.statusCode}',
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Error uploading icon to Cloudinary: ${response.statusCode}',
+              ),
+              backgroundColor: Colors.red,
             ),
-            backgroundColor: Colors.red,
-          ),
-        );
+          );
+        }
         return null;
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error uploading icon to Cloudinary: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading icon to Cloudinary: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return null;
     }
   }
@@ -433,7 +417,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
           color: Theme.of(context).cardColor,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -502,7 +486,10 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withOpacity(0.3)],
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.3),
+                    ],
                   ),
                 ),
               ),
@@ -515,7 +502,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
+                    color: Colors.black.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -534,7 +521,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: IconButton(
@@ -549,7 +536,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
                     const SizedBox(width: 8),
                     // Container(
                     //   decoration: BoxDecoration(
-                    //     color: Colors.black.withOpacity(0.7),
+                    //     color: Colors.black.withValues(alpha: 0.7),
                     //     borderRadius: BorderRadius.circular(20),
                     //   ),
                     //   child: IconButton(
@@ -607,7 +594,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -655,7 +642,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
             backgroundColor: const Color(0xFF6366F1),
             foregroundColor: Colors.white,
             elevation: 4,
-            shadowColor: const Color(0xFF6366F1).withOpacity(0.3),
+            shadowColor: const Color(0xFF6366F1).withValues(alpha: 0.3),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 //import 'package:rent_hive_app/src/Pages/Home/home.dart';
 import 'package:rent_hive_app/src/Pages/Structure/Structure.dart';
 import 'package:rent_hive_app/src/Registration/signup.dart';
@@ -35,13 +36,13 @@ class _LoginPageState extends State<LoginPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    print("Attempting to sign in with email: $email");
-    print("Password length: ${password.length} characters");
+    debugPrint("Attempting to sign in with email: $email");
+    debugPrint("Password length: \\${password.length} characters");
 
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
 
-      print("Login successful for user: ${_auth.currentUser?.uid}");
+      debugPrint("Login successful for user: \\${_auth.currentUser?.uid}");
 
       // Navigate to main screen on successful login
       Navigator.pushReplacement(
@@ -49,8 +50,8 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (context) => MainScreen()),
       );
     } on FirebaseAuthException catch (e) {
-      print(
-        "Firebase Auth Error during login: Code: ${e.code}, Message: ${e.message}",
+      debugPrint(
+        "Firebase Auth Error during login: Code: \\${e.code}, Message: \\${e.message}",
       );
       String errorMessage;
       switch (e.code) {
@@ -79,12 +80,52 @@ class _LoginPageState extends State<LoginPage> {
       }
       _showErrorDialog(errorMessage);
     } catch (e) {
-      print("Unexpected error during login: $e");
+      debugPrint("Unexpected error during login: $e");
       _showErrorDialog('An unexpected error occurred. Please try again.');
     } finally {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return; // User cancelled the sign-in
+      }
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await _auth.signInWithCredential(credential);
+
+      // Navigate to main screen on successful login
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MainScreen()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      _showErrorDialog('Google sign-in failed: ${e.message}');
+    } catch (e) {
+      _showErrorDialog('An unexpected error occurred: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -125,13 +166,17 @@ class _LoginPageState extends State<LoginPage> {
   // Add password validation helper
   void _validatePassword() {
     final password = _passwordController.text;
-    print("Password validation:");
-    print("- Length: ${password.length} characters");
-    print("- Contains uppercase: ${password.contains(RegExp(r'[A-Z]'))}");
-    print("- Contains lowercase: ${password.contains(RegExp(r'[a-z]'))}");
-    print("- Contains numbers: ${password.contains(RegExp(r'[0-9]'))}");
-    print(
-      "- Contains special chars: ${password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))}",
+    debugPrint("Password validation:");
+    debugPrint("- Length: \\${password.length} characters");
+    debugPrint(
+      "- Contains uppercase: \\${password.contains(RegExp(r'[A-Z]'))}",
+    );
+    debugPrint(
+      "- Contains lowercase: \\${password.contains(RegExp(r'[a-z]'))}",
+    );
+    debugPrint("- Contains numbers: \\${password.contains(RegExp(r'[0-9]'))}");
+    debugPrint(
+      "- Contains special chars: \\${password.contains(RegExp(r'[!@#\$%^&*(),.?\":{}|<>]'))}",
     );
 
     if (password.length < 6) {
@@ -344,6 +389,48 @@ class _LoginPageState extends State<LoginPage> {
                                       ),
                                     ),
                           ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 2000),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: Image.asset(
+                            'assets/google_logo.png',
+                            height: 24,
+                            width: 24,
+                            errorBuilder:
+                                (context, error, stackTrace) => Icon(
+                                  Icons.login,
+                                  color: Colors.red,
+                                  size: 24,
+                                ),
+                          ),
+                          label: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            child: Text(
+                              'Sign in with Google',
+                              style: TextStyle(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black87,
+                            elevation: 2,
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                          onPressed: _isLoading ? null : _signInWithGoogle,
                         ),
                       ),
                     ),

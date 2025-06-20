@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
-import '../../models/Order.dart';
+import '../../models/Order.dart' as model;
 import '../../services/cart_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // void main() => runApp(const MyApp());
 
@@ -36,7 +36,7 @@ class _WishlistPageState extends State<WishlistPage> {
         backgroundColor: Colors.deepPurple,
         elevation: 0,
         title: Text(
-          'My Cart',
+          'My Orders',
           style: GoogleFonts.roboto(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -68,8 +68,8 @@ class _WishlistPageState extends State<WishlistPage> {
           ),
         ],
       ),
-      body: StreamBuilder<List<Order>>(
-        stream: _cartService.getCartItems(),
+      body: StreamBuilder<List<model.Order>>(
+        stream: _cartService.getAllUserOrders(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -115,122 +115,165 @@ class _WishlistPageState extends State<WishlistPage> {
             );
           }
 
-          return ListView.builder(
-            itemCount: cartItems.length,
+          final groupedOrders = _groupOrdersByStatus(cartItems);
+          final statusOrder = [
+            'pending',
+            'approved',
+            'paid',
+            'rejected',
+            'returned',
+          ];
+
+          return ListView(
             padding: const EdgeInsets.all(16),
-            itemBuilder: (context, index) {
-              final item = cartItems[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      item.productImage,
-                      height: 80,
-                      width: 80,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: 80,
-                          width: 80,
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  title: Text(
-                    item.productTitle,
-                    style: GoogleFonts.roboto(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text(
-                        'Rs. ${item.productPrice.toStringAsFixed(2)}',
-                        style: GoogleFonts.roboto(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepPurple,
-                        ),
+            children:
+                statusOrder.map((status) {
+                  final orders = groupedOrders[status] ?? [];
+                  if (orders.isEmpty) return const SizedBox.shrink();
+
+                  return ExpansionTile(
+                    title: Text(
+                      '${status[0].toUpperCase()}${status.substring(1)} (${orders.length})',
+                      style: GoogleFonts.roboto(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.deepPurple.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          item.productCategory,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.deepPurple,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () => _removeFromCart(item.id),
-                  ),
-                ),
-              );
-            },
+                    ),
+                    initiallyExpanded:
+                        status == 'pending' || status == 'approved',
+                    children:
+                        orders.map((item) {
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  spreadRadius: 1,
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.all(16),
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  item.productImage,
+                                  height: 80,
+                                  width: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      height: 80,
+                                      width: 80,
+                                      color: Colors.grey[300],
+                                      child: const Icon(
+                                        Icons.image_not_supported,
+                                        color: Colors.grey,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              title: Text(
+                                item.productTitle,
+                                style: GoogleFonts.roboto(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Rs. ${item.productPrice.toStringAsFixed(2)}',
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.deepPurple,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  if (item.status == 'approved')
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          _showPaymentDialog(item);
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                        ),
+                                        child: const Text('Pay Now'),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                ),
+                                onPressed:
+                                    () => _cartService.removeFromCart(item.id),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  );
+                }).toList(),
           );
         },
       ),
     );
   }
 
-  Future<void> _removeFromCart(String orderId) async {
-    try {
-      await _cartService.removeFromCart(orderId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Item removed from cart'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error removing item: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  Map<String, List<model.Order>> _groupOrdersByStatus(
+    List<model.Order> orders,
+  ) {
+    final map = <String, List<model.Order>>{};
+    for (final order in orders) {
+      (map[order.status] ??= []).add(order);
     }
+    return map;
+  }
+
+  void _showPaymentDialog(model.Order order) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Complete Payment'),
+          content: const Text('This is a placeholder for the payment form.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Simulate payment
+                await FirebaseFirestore.instance
+                    .collection('orders')
+                    .doc(order.id)
+                    .update({'status': 'paid'});
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Payment Successful!')),
+                );
+              },
+              child: const Text('Pay'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 

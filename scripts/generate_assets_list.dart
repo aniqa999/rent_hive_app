@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 void main() async {
   final directory = Directory('assets/categoryIcons');
@@ -6,7 +7,7 @@ void main() async {
 
   final imageFiles =
       files
-          .where((file) => file is File)
+          .whereType<File>()
           .where(
             (file) =>
                 file.path.toLowerCase().endsWith('.png') ||
@@ -20,10 +21,10 @@ void main() async {
 // This file is auto-generated. Do not edit manually.
 // Run: dart scripts/generate_assets_list.dart
 
-const List<String> categoryIcons = ${imageFiles};
+const List<String> categoryIcons = $imageFiles;
 ''';
 
   await File('lib/src/constants/category_icons.dart').writeAsString(output);
-  print('Generated ${imageFiles.length} icon paths');
-  print('Output written to: lib/src/constants/category_icons.dart');
+  debugPrint('Generated ${imageFiles.length} icon paths');
+  debugPrint('Output written to: lib/src/constants/category_icons.dart');
 }

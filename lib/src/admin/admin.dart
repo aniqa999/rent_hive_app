@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rent_hive_app/firebase_options.dart';
 import 'products_listing.dart';
-import 'add_product_screen.dart';
 import 'categories_listing.dart';
+import 'admin_orders_screen.dart';
+import 'payment_summary_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,13 +82,24 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   bool isDark = false;
-  String selectedTab = 'Weekly';
+  String selectedTab = 'Weekly'; // To manage tab selection
   int selectedBottomIndex = 0;
   late AnimationController _animationController, _chartAnimationController;
+
+  bool _isLoading = true;
+  int _totalUsers = 0;
+  int _totalOrders = 0;
+  int _totalProducts = 0;
+  double _totalRevenue = 0.0;
+  List<double> _chartData = List.filled(7, 0); // Generic chart data
+  List<Map<String, dynamic>> _recentActivities = [];
 
   @override
   void initState() {
     super.initState();
+    _fetchDashboardData();
+    _fetchRecentActivities();
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -95,8 +108,176 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
-    _animationController.forward();
-    _chartAnimationController.forward();
+  }
+
+  Future<void> _fetchDashboardData() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      // Fetch general stats only once or less frequently if needed
+      if (_totalUsers == 0) {
+        final usersSnapshot =
+            await FirebaseFirestore.instance.collection('users').count().get();
+        _totalUsers = usersSnapshot.count ?? 0;
+
+        final ordersSnapshot =
+            await FirebaseFirestore.instance.collection('orders').count().get();
+        _totalOrders = ordersSnapshot.count ?? 0;
+
+        final productsSnapshot =
+            await FirebaseFirestore.instance
+                .collection('products')
+                .count()
+                .get();
+        _totalProducts = productsSnapshot.count ?? 0;
+
+        final revenueSnapshot =
+            await FirebaseFirestore.instance
+                .collection('orders')
+                .where('status', whereIn: ['approved', 'rented', 'returned'])
+                .get();
+        _totalRevenue = revenueSnapshot.docs.fold(
+          0.0,
+          (sum, doc) => sum + (doc.data()['productPrice'] ?? 0.0),
+        );
+      }
+
+      // Fetch chart data based on selected tab
+      final now = DateTime.now();
+      DateTime startDate;
+      int daysToFetch;
+
+      switch (selectedTab) {
+        case 'Today':
+          startDate = DateTime(now.year, now.month, now.day);
+          daysToFetch = 1;
+          break;
+        case 'Monthly':
+          startDate = now.subtract(const Duration(days: 30));
+          daysToFetch = 30;
+          break;
+        case 'Weekly':
+        default:
+          startDate = now.subtract(const Duration(days: 7));
+          daysToFetch = 7;
+          break;
+      }
+
+      final chartOrdersSnapshot =
+          await FirebaseFirestore.instance
+              .collection('orders')
+              .where('createdAt', isGreaterThanOrEqualTo: startDate)
+              .get();
+
+      // Process data for the chart
+      if (selectedTab == 'Weekly' || selectedTab == 'Today') {
+        final dailyCounts = List.filled(7, 0.0);
+        for (var doc in chartOrdersSnapshot.docs) {
+          final orderDate = (doc.data()['createdAt'] as Timestamp).toDate();
+          final dayIndex = now.difference(orderDate).inDays;
+          if (dayIndex >= 0 && dayIndex < 7) {
+            dailyCounts[6 - dayIndex]++;
+          }
+        }
+        _chartData = dailyCounts;
+      } else if (selectedTab == 'Monthly') {
+        // Example: group by week for monthly view
+        final weeklyCounts = List.filled(4, 0.0);
+        for (var doc in chartOrdersSnapshot.docs) {
+          final orderDate = (doc.data()['createdAt'] as Timestamp).toDate();
+          final weekIndex = (now.difference(orderDate).inDays / 7).floor();
+          if (weekIndex >= 0 && weekIndex < 4) {
+            weeklyCounts[3 - weekIndex]++;
+          }
+        }
+        // For simplicity, we stretch 4 weeks of data over 7 chart bars
+        _chartData = [
+          weeklyCounts[0],
+          weeklyCounts[0],
+          weeklyCounts[1],
+          weeklyCounts[1],
+          weeklyCounts[2],
+          weeklyCounts[2],
+          weeklyCounts[3],
+        ];
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load dashboard data: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _animationController.forward();
+        _chartAnimationController.forward();
+      }
+    }
+  }
+
+  Future<void> _fetchRecentActivities() async {
+    if (!mounted) return;
+
+    try {
+      // Fetch last 2 products
+      final productsSnapshot =
+          await FirebaseFirestore.instance
+              .collection('products')
+              .orderBy('createdAt', descending: true)
+              .limit(2)
+              .get();
+
+      // Fetch last 2 categories
+      final categoriesSnapshot =
+          await FirebaseFirestore.instance
+              .collection('categories')
+              .orderBy('createdAt', descending: true)
+              .limit(2)
+              .get();
+
+      List<Map<String, dynamic>> activities = [];
+
+      for (var doc in productsSnapshot.docs) {
+        final data = doc.data();
+        final createdAt = (data['createdAt'] as Timestamp).toDate();
+        activities.add({
+          'title': 'New Product: ${data['title']}',
+          'time': createdAt,
+          'icon': data['imageURL'],
+          'color': Colors.orange,
+        });
+      }
+
+      for (var doc in categoriesSnapshot.docs) {
+        final data = doc.data();
+        final createdAt = (data['createdAt'] as Timestamp).toDate();
+        activities.add({
+          'title': 'New Category: ${data['name']}',
+          'time': createdAt,
+          'icon': data['iconURL'],
+          'color': Colors.teal,
+        });
+      }
+
+      // Sort activities by time
+      activities.sort(
+        (a, b) => (b['time'] as DateTime).compareTo(a['time'] as DateTime),
+      );
+
+      if (mounted) {
+        setState(() {
+          _recentActivities = activities;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load recent activities: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -106,82 +287,86 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  final List<Map<String, dynamic>> stats = [
-    {
-      'icon': Icons.people_outline,
-      'label': 'Total Visitors',
-      'value': 12548,
-      'percent': '+12.5%',
-      'color': const Color(0xFF10B981),
-      'bgColor': const Color(0xFFECFDF5),
-      'darkBgColor': const Color(0xFF064E3B),
-      'hover': false,
-    },
-    {
-      'icon': Icons.shopping_bag_outlined,
-      'label': 'Total Orders',
-      'value': 3847,
-      'percent': '+8.2%',
-      'color': const Color(0xFF3B82F6),
-      'bgColor': const Color(0xFFEFF6FF),
-      'darkBgColor': const Color(0xFF1E3A8A),
-      'hover': false,
-    },
-    {
-      'icon': Icons.visibility_outlined,
-      'label': 'Page Views',
-      'value': 25642,
-      'percent': '+15.3%',
-      'color': const Color(0xFF8B5CF6),
-      'bgColor': const Color(0xFFF3F4F6),
-      'darkBgColor': const Color(0xFF581C87),
-      'hover': false,
-    },
-    {
-      'icon': Icons.chat_bubble_outline,
-      'label': 'Conversion',
-      'value': '87.2%',
-      'percent': '+5.1%',
-      'color': const Color(0xFFF59E0B),
-      'bgColor': const Color(0xFFFEF3C7),
-      'darkBgColor': const Color(0xFF92400E),
-      'hover': false,
-    },
-  ];
-
-  List<double> chartData = [45, 67, 23, 89, 34, 78, 56];
-
   @override
   Widget build(BuildContext context) {
     final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
+
+    final stats = [
+      {
+        'icon': Icons.people_outline,
+        'label': 'Total Users',
+        'value': _totalUsers.toString(),
+        'color': const Color(0xFF10B981),
+        'bgColor': const Color(0xFFECFDF5),
+        'darkBgColor': const Color(0xFF064E3B),
+        'hover': false,
+      },
+      {
+        'icon': Icons.shopping_bag_outlined,
+        'label': 'Total Orders',
+        'value': _totalOrders.toString(),
+        'color': const Color(0xFF3B82F6),
+        'bgColor': const Color(0xFFEFF6FF),
+        'darkBgColor': const Color(0xFF1E3A8A),
+        'hover': false,
+      },
+      {
+        'icon': Icons.inventory_2_outlined,
+        'label': 'Products',
+        'value': _totalProducts.toString(),
+        'color': const Color(0xFF8B5CF6),
+        'bgColor': const Color(0xFFF3F4F6),
+        'darkBgColor': const Color(0xFF581C87),
+        'hover': false,
+      },
+      {
+        'icon': Icons.monetization_on_outlined,
+        'label': 'Revenue',
+        'value': 'Rs.${_totalRevenue.toStringAsFixed(0)}',
+        'color': const Color(0xFFF59E0B),
+        'bgColor': const Color(0xFFFEF3C7),
+        'darkBgColor': const Color(0xFF92400E),
+        'hover': false,
+      },
+    ];
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(isDarkTheme),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 10,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSearchBar(),
-                  const SizedBox(height: 20),
-                  _buildStatsGrid(),
-                  const SizedBox(height: 25),
-                  _buildChartSection(),
-                  const SizedBox(height: 20),
-                  _buildRecentActivity(),
+      body:
+          _isLoading
+              ? Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor,
+                  ),
+                ),
+              )
+              : CustomScrollView(
+                slivers: [
+                  _buildAppBar(isDarkTheme),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 10,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSearchBar(),
+                          const SizedBox(height: 20),
+                          _buildStatsGrid(stats),
+                          const SizedBox(height: 25),
+                          _buildChartSection(),
+                          const SizedBox(height: 20),
+                          _buildRecentActivity(),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+      bottomNavigationBar: _isLoading ? null : _buildBottomNavigationBar(),
     );
   }
 
@@ -263,22 +448,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         ),
         child: TextField(
           decoration: InputDecoration(
-            hintText: 'Search for analytics, orders, customers...',
+            hintText: 'Search...',
             prefixIcon: const Icon(Icons.search, color: Color(0xFF6B7280)),
-            suffixIcon: Container(
-              margin: const EdgeInsets.all(8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'Search',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
             filled: true,
             fillColor: Theme.of(context).cardColor,
             border: OutlineInputBorder(
@@ -290,16 +461,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               vertical: 14,
             ),
           ),
-          onSubmitted:
-              (query) => ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('Searching for: $query'))),
         ),
       ),
     );
   }
 
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(List<Map<String, dynamic>> stats) {
     return AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
@@ -310,7 +477,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             crossAxisCount: 2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 1.3,
+            childAspectRatio: 1.2,
           ),
           itemCount: stats.length,
           itemBuilder: (context, index) {
@@ -350,7 +517,6 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             opacity: value,
             child: InkWell(
               onTap: () => HapticFeedback.lightImpact(),
-              onHover: (hovering) => setState(() => stat['hover'] = hovering),
               borderRadius: BorderRadius.circular(20),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -358,21 +524,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color:
-                        stat['hover']
-                            ? (stat['color'] as Color).withOpacity(0.3)
-                            : Colors.transparent,
-                    width: 2,
-                  ),
                   boxShadow: [
                     BoxShadow(
-                      color:
-                          stat['hover']
-                              ? (stat['color'] as Color).withOpacity(0.15)
-                              : Colors.black.withOpacity(0.05),
-                      blurRadius: stat['hover'] ? 20 : 10,
-                      offset: Offset(0, stat['hover'] ? 8 : 4),
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
                     ),
                   ],
                 ),
@@ -387,8 +543,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           decoration: BoxDecoration(
                             color:
                                 isDarkTheme
-                                    ? stat['darkBgColor']
-                                    : stat['bgColor'],
+                                    ? (stat['darkBgColor'] as Color)
+                                    : (stat['bgColor'] as Color),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
@@ -397,27 +553,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             size: 24,
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: (stat['color'] as Color).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            stat['percent'],
-                            style: TextStyle(
-                              color: stat['color'],
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
-                    const Spacer(),
+                    SizedBox(height: 8),
                     Text(
                       stat['value'].toString(),
                       style: Theme.of(
@@ -491,7 +629,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                   return BarChart(
                     BarChartData(
                       alignment: BarChartAlignment.spaceAround,
-                      maxY: 100,
+                      maxY:
+                          (_chartData.isEmpty
+                              ? 10
+                              : _chartData.reduce((a, b) => a > b ? a : b)) *
+                          1.2,
                       barTouchData: BarTouchData(
                         touchTooltipData: BarTouchTooltipData(
                           getTooltipColor: (group) => const Color(0xFF6366F1),
@@ -504,7 +646,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             reservedSize: 40,
                             getTitlesWidget:
                                 (value, meta) => Text(
-                                  '${value.toInt()}k',
+                                  '${value.toInt()}',
                                   style: TextStyle(
                                     color: Colors.grey[600],
                                     fontSize: 12,
@@ -516,7 +658,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           sideTitles: SideTitles(
                             showTitles: true,
                             getTitlesWidget: (value, meta) {
-                              const days = [
+                              final days = [
                                 'Sun',
                                 'Mon',
                                 'Tue',
@@ -525,8 +667,18 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                 'Fri',
                                 'Sat',
                               ];
-                              if (value.toInt() >= 0 &&
-                                  value.toInt() < days.length) {
+                              if (selectedTab == 'Monthly') {
+                                final weeks = ['W1', 'W2', 'W3', 'W4'];
+                                if (value.toInt() < weeks.length) {
+                                  return Text(
+                                    weeks[value.toInt()],
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                }
+                              } else if (value.toInt() < days.length) {
                                 return Text(
                                   days[value.toInt()],
                                   style: TextStyle(
@@ -549,7 +701,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       gridData: FlGridData(
                         show: true,
                         drawVerticalLine: false,
-                        horizontalInterval: 20,
+                        horizontalInterval: 5,
                         getDrawingHorizontalLine:
                             (value) => FlLine(
                               color: Colors.grey.withOpacity(0.1),
@@ -563,8 +715,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           barRods: [
                             BarChartRodData(
                               toY:
-                                  chartData[index] *
-                                  _chartAnimationController.value,
+                                  _chartData.length > index
+                                      ? _chartData[index] *
+                                          _chartAnimationController.value
+                                      : 0,
                               gradient: const LinearGradient(
                                 colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
                                 begin: Alignment.bottomCenter,
@@ -626,14 +780,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                     onPressed: () {
                       setState(() {
                         selectedTab = label;
-                        if (label == 'Today') {
-                          chartData = [30, 45, 20, 60, 35, 50, 25];
-                        } else if (label == 'Weekly') {
-                          chartData = [45, 67, 23, 89, 34, 78, 56];
-                        } else {
-                          chartData = [65, 45, 78, 34, 89, 23, 67];
-                        }
                       });
+                      _fetchDashboardData();
                       _chartAnimationController.reset();
                       _chartAnimationController.forward();
                     },
@@ -652,13 +800,6 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -670,71 +811,98 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 15),
-          ...List.generate(3, (index) {
-            final activities = [
-              {
-                'title': 'New order received',
-                'time': '2 min ago',
-                'icon': Icons.shopping_bag,
-                'color': Colors.green,
-              },
-              {
-                'title': 'Payment processed',
-                'time': '5 min ago',
-                'icon': Icons.payment,
-                'color': Colors.blue,
-              },
-              {
-                'title': 'User registered',
-                'time': '10 min ago',
-                'icon': Icons.person_add,
-                'color': Colors.orange,
-              },
-            ];
-            return Padding(
-              padding: EdgeInsets.only(bottom: index == 2 ? 0 : 12),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: (activities[index]['color']! as Color).withOpacity(
-                        0.1,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      activities[index]['icon'] as IconData,
-                      color: activities[index]['color'] as Color,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          activities[index]['title'] as String,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        Text(
-                          activities[index]['time'] as String,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+          if (_recentActivities.isEmpty)
+            Center(
+              child: Text(
+                'No recent activities.',
+                style: TextStyle(color: Colors.grey[600]),
               ),
-            );
-          }),
+            )
+          else
+            ..._recentActivities.asMap().entries.map((entry) {
+              int index = entry.key;
+              Map<String, dynamic> activity = entry.value;
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: index == _recentActivities.length - 1 ? 0 : 12,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: (activity['color']! as Color).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child:
+                          activity['icon'] is String &&
+                                  (activity['icon'] as String).startsWith(
+                                    'http',
+                                  )
+                              ? ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: Image.network(
+                                  activity['icon'] as String,
+                                  width: 24,
+                                  height: 24,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (context, error, stackTrace) =>
+                                          const Icon(
+                                            Icons.error_outline,
+                                            color: Colors.red,
+                                            size: 20,
+                                          ),
+                                ),
+                              )
+                              : Icon(
+                                activity['icon'] is IconData
+                                    ? activity['icon'] as IconData
+                                    : Icons.info,
+                                color: activity['color'] as Color,
+                                size: 20,
+                              ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            activity['title'] as String,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            _formatTimeAgo(activity['time'] as DateTime),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
         ],
       ),
     );
+  }
+
+  String _formatTimeAgo(DateTime time) {
+    final now = DateTime.now();
+    final difference = now.difference(time);
+    if (difference.inSeconds < 60) {
+      return '${difference.inSeconds}s ago';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
   }
 
   Widget _buildBottomNavigationBar() {
@@ -779,22 +947,13 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             label: 'Categories',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            activeIcon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: Icon(Icons.payment_outlined),
+            activeIcon: Icon(Icons.payment),
+            label: 'Payments',
           ),
         ],
         onTap: (index) {
           setState(() => selectedBottomIndex = index);
-          final pages = [
-            'Dashboard',
-            'Orders',
-            'Products',
-            'Categories',
-            'Settings',
-          ];
-
-          // Navigate to products screen when products tab is selected
           if (index == 2) {
             Navigator.push(
               context,
@@ -803,18 +962,24 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               ),
             );
           } else if (index == 3) {
-            // Navigate to categories screen when categories tab is selected
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => const CategoriesListingScreen(),
               ),
             );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${pages[index]} selected'),
-                duration: const Duration(milliseconds: 800),
+          } else if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AdminOrdersScreen(),
+              ),
+            );
+          } else if (index == 4) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PaymentSummaryScreen(),
               ),
             );
           }

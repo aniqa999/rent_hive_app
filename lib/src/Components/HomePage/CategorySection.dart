@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:rent_hive_app/src/Pages/Products/ProductsListing.dart';
 import '../../models/Category.dart';
 
 class Categorysection extends StatefulWidget {
@@ -35,7 +34,7 @@ class _CategorysectionState extends State<Categorysection> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading categories: $e');
+      debugPrint('Error loading categories: $e');
       setState(() {
         _isLoading = false;
       });
@@ -127,7 +126,7 @@ class _CategorysectionState extends State<Categorysection> {
 
   void _onCategoryTap(Category category) {
     // Handle individual category tap
-    print('Tapped on category: ${category.name}');
+    debugPrint('Tapped on category: ${category.name}');
     // Navigate to specific category page or filter content
     // Example:
     // Navigator.push(
@@ -245,14 +244,13 @@ class _CategorysectionState extends State<Categorysection> {
                                     borderRadius: BorderRadius.circular(25),
                                   ),
                                   child:
-                                      category.iconURL != null &&
-                                              category.iconURL!.isNotEmpty
+                                      category.iconURL.isNotEmpty
                                           ? ClipRRect(
                                             borderRadius: BorderRadius.circular(
                                               25,
                                             ),
                                             child: Image.network(
-                                              category.iconURL!,
+                                              category.iconURL,
                                               width: 50,
                                               height: 50,
                                               fit: BoxFit.cover,
