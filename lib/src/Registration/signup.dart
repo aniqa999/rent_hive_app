@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter_svg/svg.dart';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:emailjs/emailjs.dart' as emailjs;
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -163,6 +164,23 @@ class _SignupPageState extends State<SignupPage> {
 
       // Send email verification
       await credential.user!.sendEmailVerification();
+
+      try {
+        await emailjs.send(
+          dotenv.env['EMAIL_SERVICE'] ?? '',
+          dotenv.env['EMAIL_TEMPLATE'] ?? '',
+          {
+            'user_name': _nameController.text.trim(),
+            'user_email': _emailController.text.trim(),
+          },
+          emailjs.Options(
+            publicKey: dotenv.env['PUBLIC_KEY'] ?? '',
+            privateKey: dotenv.env['PRIVATE_KEY'] ?? '',
+          ),
+        );
+      } catch (emailJsError) {
+        print('Failed to send welcome email: $emailJsError');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

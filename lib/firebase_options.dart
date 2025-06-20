@@ -45,12 +45,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyBpEIFBH2vHJJhxMpKp-dJRZEwWc6vuXo0',
-    appId: '1:333024348549:web:98fa0d9667a2940270dcec',
+    appId: '1:333024348549:web:69473762d7ab48b870dcec',
     messagingSenderId: '333024348549',
     projectId: 'auth-15f15',
     authDomain: 'auth-15f15.firebaseapp.com',
     storageBucket: 'auth-15f15.firebasestorage.app',
-    measurementId: 'G-Q5476PR2C5',
+    measurementId: 'G-E5HGBKJELX',
   );
 
   static const FirebaseOptions android = FirebaseOptions(

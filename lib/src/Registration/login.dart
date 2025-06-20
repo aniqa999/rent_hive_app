@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-//import 'package:rent_hive_app/src/Pages/Home/home.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rent_hive_app/src/Pages/Structure/Structure.dart';
 import 'package:rent_hive_app/src/Registration/signup.dart';
 import 'package:rent_hive_app/src/admin/adminlogin.dart';
@@ -21,9 +21,38 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
+  bool _autoLoginChecked = false;
 
-  Future<void> _signIn() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+  @override
+  void initState() {
+    super.initState();
+    _checkAutoLogin();
+  }
+
+  Future<void> _checkAutoLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? savedEmail = prefs.getString('email');
+    final String? savedPassword = prefs.getString('password');
+
+    if (savedEmail != null && savedPassword != null) {
+      setState(() {
+        _emailController.text = savedEmail;
+        _passwordController.text = savedPassword;
+        _autoLoginChecked = true;
+      });
+
+      // Attempt auto-login
+      await _signIn(autoLogin: true);
+    } else {
+      setState(() {
+        _autoLoginChecked = true;
+      });
+    }
+  }
+
+  Future<void> _signIn({bool autoLogin = false}) async {
+    if (!autoLogin &&
+        (_emailController.text.isEmpty || _passwordController.text.isEmpty)) {
       _showErrorDialog('Please fill in all fields');
       return;
     }
@@ -35,23 +64,27 @@ class _LoginPageState extends State<LoginPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    print("Attempting to sign in with email: $email");
-    print("Password length: ${password.length} characters");
-
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
 
-      print("Login successful for user: ${_auth.currentUser?.uid}");
+      // Save login credentials if this is a manual login
+      if (!autoLogin) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('email', email);
+        await prefs.setString('password', password);
+      }
 
-      // Navigate to main screen on successful login
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => MainScreen()),
       );
     } on FirebaseAuthException catch (e) {
-      print(
-        "Firebase Auth Error during login: Code: ${e.code}, Message: ${e.message}",
-      );
+      if (autoLogin) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('email');
+        await prefs.remove('password');
+      }
+
       String errorMessage;
       switch (e.code) {
         case 'user-not-found':
@@ -79,13 +112,19 @@ class _LoginPageState extends State<LoginPage> {
       }
       _showErrorDialog(errorMessage);
     } catch (e) {
-      print("Unexpected error during login: $e");
       _showErrorDialog('An unexpected error occurred. Please try again.');
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  // Add this method to clear saved credentials when logging out
+  static Future<void> clearSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('email');
+    await prefs.remove('password');
   }
 
   void _showErrorDialog(String message) {
@@ -122,7 +161,13 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // Add password validation helper
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   void _validatePassword() {
     final password = _passwordController.text;
     print("Password validation:");
@@ -142,14 +187,15 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // Show loading indicator while checking for auto-login
+    if (!_autoLoginChecked) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -167,7 +213,6 @@ class _LoginPageState extends State<LoginPage> {
                 child: Stack(
                   children: <Widget>[
                     Positioned.fill(
-                      // right: 40,
                       child: FadeInUp(
                         duration: Duration(milliseconds: 1200),
                         child: Center(

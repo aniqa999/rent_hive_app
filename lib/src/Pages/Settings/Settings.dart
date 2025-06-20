@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:rent_hive_app/src/Components/SettingsPage/settingSection.dart';
 import 'package:rent_hive_app/src/Components/SettingsPage/settingItem.dart';
+import 'package:rent_hive_app/test/profile_management.dart';
+import 'package:rent_hive_app/test/security.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -37,13 +39,29 @@ class SettingsScreen extends StatelessWidget {
                       icon: Icons.person_outline,
                       title: 'Profile',
                       subtitle: 'Manage your profile information',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => const ProfileManagementScreen(),
+                          ),
+                        );
+                      },
                     ),
                     buildSettingsItem(
                       icon: Icons.security,
                       title: 'Security',
                       subtitle: 'Password and security settings',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => const SecuritySettingsScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
