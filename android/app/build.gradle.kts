@@ -45,3 +45,11 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Add Google Play Services dependency with specific version
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.google.android.gms:play-services-base:18.2.0")
+    // Add specific version to match the required version
+    implementation("com.google.android.gms:play-services-auth-api-phone:18.0.1")
+}

@@ -90,7 +90,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   int _totalUsers = 0;
   int _totalOrders = 0;
   int _totalProducts = 0;
-  double _totalRevenue = 0.0;
+  int _totalCategories = 0; // Changed from _totalRevenue to _totalCategories
   List<double> _chartData = List.filled(7, 0); // Generic chart data
   List<Map<String, dynamic>> _recentActivities = [];
 
@@ -132,15 +132,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 .get();
         _totalProducts = productsSnapshot.count ?? 0;
 
-        final revenueSnapshot =
+        final categoriesSnapshot =
             await FirebaseFirestore.instance
-                .collection('orders')
-                .where('status', whereIn: ['approved', 'rented', 'returned'])
+                .collection('categories')
+                .count()
                 .get();
-        _totalRevenue = revenueSnapshot.docs.fold(
-          0.0,
-          (sum, doc) => sum + (doc.data()['productPrice'] ?? 0.0),
-        );
+        _totalCategories = categoriesSnapshot.count ?? 0;
       }
 
       // Fetch chart data based on selected tab
@@ -299,6 +296,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         'color': const Color(0xFF10B981),
         'bgColor': const Color(0xFFECFDF5),
         'darkBgColor': const Color(0xFF064E3B),
+        'gradient': const LinearGradient(
+          colors: [Color(0xFF10B981), Color(0xFF059669)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         'hover': false,
       },
       {
@@ -308,6 +310,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         'color': const Color(0xFF3B82F6),
         'bgColor': const Color(0xFFEFF6FF),
         'darkBgColor': const Color(0xFF1E3A8A),
+        'gradient': const LinearGradient(
+          colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         'hover': false,
       },
       {
@@ -317,15 +324,25 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         'color': const Color(0xFF8B5CF6),
         'bgColor': const Color(0xFFF3F4F6),
         'darkBgColor': const Color(0xFF581C87),
+        'gradient': const LinearGradient(
+          colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         'hover': false,
       },
       {
-        'icon': Icons.monetization_on_outlined,
-        'label': 'Revenue',
-        'value': 'Rs.${_totalRevenue.toStringAsFixed(0)}',
+        'icon': Icons.category_outlined,
+        'label': 'Categories',
+        'value': _totalCategories.toString(),
         'color': const Color(0xFFF59E0B),
         'bgColor': const Color(0xFFFEF3C7),
         'darkBgColor': const Color(0xFF92400E),
+        'gradient': const LinearGradient(
+          colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         'hover': false,
       },
     ];
@@ -348,13 +365,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20.0,
-                        vertical: 10,
+                        vertical: 20,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSearchBar(),
-                          const SizedBox(height: 20),
                           _buildStatsGrid(stats),
                           const SizedBox(height: 25),
                           _buildChartSection(),
@@ -372,12 +387,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
   Widget _buildAppBar(bool isDarkTheme) {
     return SliverAppBar(
-      expandedHeight: 100,
+      expandedHeight: 70,
       floating: false,
       pinned: true,
       backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
       flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+        titlePadding: const EdgeInsets.only(left: 20, bottom: 12),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -399,72 +414,41 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           ],
         ),
       ),
-      actions: [
-        Container(
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Icon(
-                isDark ? Icons.wb_sunny : Icons.nightlight_round,
-                key: ValueKey(isDark),
-                color: isDark ? Colors.orange : Colors.blue,
-              ),
-            ),
-            onPressed: () {
-              setState(() => isDark = !isDark);
-              widget.toggleTheme();
-            },
-          ),
-        ),
-        const SizedBox(width: 15),
-      ],
     );
   }
 
-  Widget _buildSearchBar() {
-    return FadeTransition(
-      opacity: _animationController,
-      child: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: TextField(
-          decoration: InputDecoration(
-            hintText: 'Search...',
-            prefixIcon: const Icon(Icons.search, color: Color(0xFF6B7280)),
-            filled: true,
-            fillColor: Theme.of(context).cardColor,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildSearchBar() {
+  //   return FadeTransition(
+  //     opacity: _animationController,
+  //     child: Container(
+  //       decoration: BoxDecoration(
+  //         boxShadow: [
+  //           BoxShadow(
+  //             color: Colors.black.withOpacity(0.05),
+  //             blurRadius: 10,
+  //             offset: const Offset(0, 2),
+  //           ),
+  //         ],
+  //       ),
+  //       child: TextField(
+  //         decoration: InputDecoration(
+  //           hintText: 'Search...',
+  //           prefixIcon: const Icon(Icons.search, color: Color(0xFF6B7280)),
+  //           filled: true,
+  //           fillColor: Theme.of(context).cardColor,
+  //           border: OutlineInputBorder(
+  //             borderRadius: BorderRadius.circular(16),
+  //             borderSide: BorderSide.none,
+  //           ),
+  //           contentPadding: const EdgeInsets.symmetric(
+  //             horizontal: 20,
+  //             vertical: 14,
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildStatsGrid(List<Map<String, dynamic>> stats) {
     return AnimatedBuilder(
@@ -477,7 +461,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             crossAxisCount: 2,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 1.2,
+            childAspectRatio: 0.9,
           ),
           itemCount: stats.length,
           itemBuilder: (context, index) {
@@ -522,13 +506,32 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).cardColor,
+                      Theme.of(context).cardColor.withOpacity(0.8),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: (stat['gradient'] as LinearGradient).colors.first
+                        .withOpacity(0.1),
+                    width: 1,
+                  ),
                   boxShadow: [
+                    BoxShadow(
+                      color: (stat['gradient'] as LinearGradient).colors.first
+                          .withOpacity(0.1),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                      spreadRadius: 0,
+                    ),
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 10,
-                      offset: Offset(0, 4),
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
@@ -541,41 +544,79 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color:
-                                isDarkTheme
-                                    ? (stat['darkBgColor'] as Color)
-                                    : (stat['bgColor'] as Color),
+                            gradient: stat['gradient'],
                             borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (stat['gradient'] as LinearGradient)
+                                    .colors
+                                    .first
+                                    .withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
                           child: Icon(
                             stat['icon'],
-                            color: stat['color'],
-                            size: 24,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: (stat['gradient'] as LinearGradient)
+                                .colors
+                                .first
+                                .withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              color:
+                                  (stat['gradient'] as LinearGradient)
+                                      .colors
+                                      .first,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 8),
-                    Text(
-                      stat['value'].toString(),
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : const Color(0xFF1F2937),
+                    const SizedBox(height: 16),
+                    Flexible(
+                      child: Text(
+                        stat['value'].toString(),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color:
+                              (stat['gradient'] as LinearGradient).colors.first,
+                          fontSize: 24,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      stat['label'],
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey[400]
-                                : Colors.grey[600],
+                    const SizedBox(height: 6),
+                    Flexible(
+                      child: Text(
+                        stat['label'],
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey[300]
+                                  : Colors.grey[700],
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

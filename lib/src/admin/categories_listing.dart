@@ -446,9 +446,15 @@ class _CategoriesListingScreenState extends State<CategoriesListingScreen>
               child: const Icon(Icons.category, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
-            const Text(
-              'Categories Management',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Flexible(
+              child: Text(
+                'Categories Management',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),

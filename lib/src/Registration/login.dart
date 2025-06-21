@@ -3,6 +3,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Added for FirebaseFirestore
 //import 'package:rent_hive_app/src/Pages/Home/home.dart';
 import 'package:rent_hive_app/src/Pages/Structure/Structure.dart';
 import 'package:rent_hive_app/src/Registration/signup.dart';
@@ -89,37 +90,220 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // Add method to check Google Sign-In availability
+  Future<bool> _isGoogleSignInAvailable() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final bool isAvailable = await googleSignIn.isSignedIn();
+      debugPrint("Google Sign-In available: $isAvailable");
+      return true;
+    } catch (e) {
+      debugPrint("Google Sign-In not available: $e");
+      return false;
+    }
+  }
+
+  // Add method to check Google Play Services
+  Future<bool> _checkGooglePlayServices() async {
+    try {
+      // This is a simple check - in a real app you might want to use GoogleApiAvailability
+      return true;
+    } catch (e) {
+      debugPrint("Google Play Services check failed: $e");
+      return false;
+    }
+  }
+
+  // Add method to handle Google Play Services update
+  void _showGooglePlayServicesUpdateDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Update Required'),
+            content: const Text(
+              'Google Play Services needs to be updated for Google Sign-In to work properly.\n\n'
+              'Please update Google Play Services from the Play Store and try again.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _isLoading = false;
+                  });
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
+  }
+
   Future<void> _signInWithGoogle() async {
     setState(() {
       _isLoading = true;
     });
+
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      debugPrint("Starting Google Sign-In process...");
+
+      // Check if Google Play Services are available
+      final bool playServicesAvailable = await _checkGooglePlayServices();
+      if (!playServicesAvailable) {
+        _showErrorDialog(
+          'Google Play Services are not available. Please update Google Play Services and try again.',
+        );
+        return;
+      }
+
+      // Check if Google Sign-In is available
+      final bool isAvailable = await _isGoogleSignInAvailable();
+      if (!isAvailable) {
+        _showErrorDialog(
+          'Google Sign-In is not available. Please make sure you have:\n\n1. Updated Google Play Services\n2. Added a Google account to your device\n3. Have an active internet connection',
+        );
+        return;
+      }
+
+      // Initialize Google Sign-In with specific configuration
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+        // Add client ID if needed
+        // clientId: 'your-client-id.apps.googleusercontent.com',
+      );
+
+      // Check if user is already signed in
+      final GoogleSignInAccount? currentUser = googleSignIn.currentUser;
+      if (currentUser != null) {
+        debugPrint("User already signed in: ${currentUser.email}");
+        await googleSignIn
+            .signOut(); // Sign out first to allow re-authentication
+      }
+
+      // Start the sign-in process
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
       if (googleUser == null) {
+        debugPrint("User cancelled Google Sign-In");
         setState(() {
           _isLoading = false;
         });
         return; // User cancelled the sign-in
       }
+
+      debugPrint("Google Sign-In successful for: ${googleUser.email}");
+
+      // Get authentication details
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
+
+      debugPrint("Got authentication tokens");
+      debugPrint(
+        "Access token: ${googleAuth.accessToken != null ? 'Present' : 'Missing'}",
+      );
+      debugPrint(
+        "ID token: ${googleAuth.idToken != null ? 'Present' : 'Missing'}",
+      );
+
+      // Create Firebase credential
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      await _auth.signInWithCredential(credential);
+
+      debugPrint("Created Firebase credential");
+
+      // Sign in to Firebase
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+
+      debugPrint("Firebase authentication successful");
+      debugPrint("User ID: ${userCredential.user?.uid}");
+      debugPrint("User email: ${userCredential.user?.email}");
+
+      // Check if user exists in Firestore, if not create user document
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userCredential.user!.uid)
+              .get();
+
+      if (!userDoc.exists) {
+        debugPrint("Creating new user document in Firestore");
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+              'uid': userCredential.user!.uid,
+              'name': userCredential.user!.displayName ?? 'User',
+              'email': userCredential.user!.email,
+              'photoURL': userCredential.user!.photoURL,
+              'createdAt': Timestamp.now(),
+              'updatedAt': Timestamp.now(),
+              'isActive': true,
+              'profileCompleted': true,
+              'signInMethod': 'google',
+            });
+        debugPrint("User document created successfully");
+      } else {
+        debugPrint("User document already exists");
+      }
 
       // Navigate to main screen on successful login
       if (mounted) {
+        debugPrint("Navigating to main screen");
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => MainScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
-      _showErrorDialog('Google sign-in failed: ${e.message}');
+      debugPrint("Firebase Auth Exception: ${e.code} - ${e.message}");
+      String errorMessage;
+
+      switch (e.code) {
+        case 'account-exists-with-different-credential':
+          errorMessage =
+              'An account already exists with the same email address but different sign-in credentials.';
+          break;
+        case 'invalid-credential':
+          errorMessage = 'The credential is invalid or has expired.';
+          break;
+        case 'operation-not-allowed':
+          errorMessage =
+              'Google Sign-In is not enabled. Please contact support.';
+          break;
+        case 'user-disabled':
+          errorMessage = 'This user account has been disabled.';
+          break;
+        case 'user-not-found':
+          errorMessage = 'No user found with these credentials.';
+          break;
+        case 'network-request-failed':
+          errorMessage =
+              'Network error. Please check your internet connection.';
+          break;
+        default:
+          errorMessage = 'Google sign-in failed: ${e.message}';
+      }
+
+      _showErrorDialog(errorMessage);
     } catch (e) {
-      _showErrorDialog('An unexpected error occurred: $e');
+      debugPrint("Unexpected error during Google Sign-In: $e");
+
+      // Check for specific Google Play Services errors
+      if (e.toString().contains('SERVICE_VERSION_UPDATE_REQUIRED') ||
+          e.toString().contains('Google Play services out of date') ||
+          e.toString().contains('12451000')) {
+        _showGooglePlayServicesUpdateDialog();
+      } else {
+        _showErrorDialog(
+          'An unexpected error occurred during Google Sign-In. Please try again.',
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {

@@ -363,9 +363,15 @@ class _AddCategoryScreenState extends State<AddCategoryScreen>
               child: const Icon(Icons.add, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
-            const Text(
-              'Add New Category',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Flexible(
+              child: Text(
+                'Add New Category',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),

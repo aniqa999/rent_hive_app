@@ -45,6 +45,17 @@ class _AddProductScreenState extends State<AddProductScreen>
     'assets/image4.jpg',
     'assets/image5.jpg',
     'assets/image6.jpg',
+    'assets/wear.JPG',
+    'assets/partywaer.JPG',
+    'assets/party waer.JPG',
+    'assets/partywear.JPG',
+    'assets/hockey.JPG',
+    'assets/bat.JPG',
+    'assets/ball.JPG',
+    'assets/cycle.JPG',
+    'assets/carss.JPG',
+    'assets/cars.JPG',
+    'assets/Car.JPG',
   ];
 
   @override
