@@ -15,7 +15,12 @@ class _PopularproductsState extends State<Popularproducts> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _firestore.collection('products').limit(8).snapshots(),
+      stream:
+          _firestore
+              .collection('products')
+              .where('status', isEqualTo: 'available')
+              .limit(8)
+              .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(

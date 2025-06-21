@@ -10,7 +10,7 @@ class CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget avatar;
-    if (cat.iconURL != null && cat.iconURL.isNotEmpty) {
+    if (cat.iconURL.isNotEmpty) {
       if (cat.iconURL.startsWith('http')) {
         avatar = Image.network(
           cat.iconURL,

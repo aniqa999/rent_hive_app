@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/Order.dart';
 import '../models/Products.dart';
+import 'package:flutter/foundation.dart';
 
 class CartService {
   final firestore.FirebaseFirestore _firestore =
@@ -11,8 +12,12 @@ class CartService {
   // Get current user ID
   String? get currentUserId => _auth.currentUser?.uid;
 
-  // Add product to cart
-  Future<void> addToCart(Product product) async {
+  // Add product to cart (now requires rentalDuration and cnic)
+  Future<void> addToCart(
+    Product product, {
+    required int rentalDuration,
+    required String cnic,
+  }) async {
     if (currentUserId == null) {
       throw Exception('User not logged in');
     }
@@ -43,6 +48,10 @@ class CartService {
         productCategory: product.category,
         createdAt: DateTime.now(),
         status: 'cart',
+        rentalDuration: rentalDuration,
+        cnic: cnic,
+        startDate: null,
+        endDate: null,
       );
 
       await _firestore.collection('orders').add(order.toMap());
@@ -78,12 +87,39 @@ class CartService {
                 .map((doc) => Order.fromMap(doc.data(), doc.id))
                 .toList();
           } catch (e) {
-            print('Error parsing cart items: $e');
+            debugPrint('Error parsing cart items: $e');
             return <Order>[];
           }
         })
         .handleError((error) {
-          print('Error fetching cart items: $error');
+          debugPrint('Error fetching cart items: $error');
+          return <Order>[];
+        });
+  }
+
+  // Get all orders for current user
+  Stream<List<Order>> getAllUserOrders() {
+    if (currentUserId == null) {
+      return Stream.value([]);
+    }
+
+    return _firestore
+        .collection('orders')
+        .where('userId', isEqualTo: currentUserId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          try {
+            return snapshot.docs
+                .map((doc) => Order.fromMap(doc.data(), doc.id))
+                .toList();
+          } catch (e) {
+            debugPrint('Error parsing all user orders: $e');
+            return <Order>[];
+          }
+        })
+        .handleError((error) {
+          debugPrint('Error fetching all user orders: $error');
           return <Order>[];
         });
   }
@@ -101,7 +137,7 @@ class CartService {
         .snapshots()
         .map((snapshot) => snapshot.docs.length)
         .handleError((error) {
-          print('Error fetching cart count: $error');
+          debugPrint('Error fetching cart count: $error');
           return 0;
         });
   }
@@ -121,7 +157,7 @@ class CartService {
 
       return result.docs.isNotEmpty;
     } catch (e) {
-      print('Error checking if product is in cart: $e');
+      debugPrint('Error checking if product is in cart: $e');
       return false;
     }
   }

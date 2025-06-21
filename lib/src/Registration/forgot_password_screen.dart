@@ -26,16 +26,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _isLoading = true;
     });
 
-    print("Attempting to send password reset email to: $email");
+    debugPrint("Attempting to send password reset email to: $email");
 
     try {
       await _auth.sendPasswordResetEmail(email: email);
-      print("Password reset email sent successfully (according to Firebase).");
+      debugPrint(
+        "Password reset email sent successfully (according to Firebase).",
+      );
       _showSuccessDialog(
         'Password reset email sent! Check your inbox (and spam folder).',
       );
     } on FirebaseAuthException catch (e) {
-      print("Firebase Auth Error: Code: ${e.code}, Message: ${e.message}");
+      debugPrint(
+        "Firebase Auth Error: Code: \\${e.code}, Message: \\${e.message}",
+      );
       String errorMessage;
       switch (e.code) {
         case 'user-not-found':
@@ -50,7 +54,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       }
       _showErrorDialog(errorMessage);
     } catch (e) {
-      print("An unexpected error occurred: $e");
+      debugPrint("An unexpected error occurred: $e");
       _showErrorDialog('An unexpected error occurred. Please try again.');
     } finally {
       if (mounted) {

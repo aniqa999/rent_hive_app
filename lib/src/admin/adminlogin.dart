@@ -115,7 +115,29 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                         child: SizedBox(
                           width: 200,
                           height: 200,
-                          child: Image.asset("assets/Images/admin_icon.png"),
+                          child: Icon(
+                            Icons.admin_panel_settings,
+                            color: Colors.white,
+                            size: 150,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    top: 80,
+                    left: 0,
+                    right: 0,
+                    child: FadeInUp(
+                      duration: Duration(milliseconds: 1600),
+                      child: Text(
+                        "Admin Sign In",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -215,7 +237,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                                     strokeWidth: 2,
                                   )
                                   : Text(
-                                    "Login",
+                                    "Sign In",
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,

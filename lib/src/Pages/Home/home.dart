@@ -127,7 +127,7 @@ class _RentHiveHomePageState extends State<RentHiveHomePage> {
           _firestore
               .collection('products')
               .where('title', isGreaterThanOrEqualTo: searchQuery)
-              .where('title', isLessThan: searchQuery + '\uf8ff')
+              .where('title', isLessThan: '$searchQuery\uf8ff')
               .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {

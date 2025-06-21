@@ -10,7 +10,12 @@ class Order {
   final String productDescription;
   final String productCategory;
   final DateTime createdAt;
-  final String status; // 'cart', 'ordered', 'delivered', etc.
+  final String
+  status; // 'pending', 'approved', 'rejected', 'rented', 'returned', etc.
+  final int rentalDuration; // in days
+  final String cnic;
+  final DateTime? startDate;
+  final DateTime? endDate;
 
   Order({
     required this.id,
@@ -22,7 +27,11 @@ class Order {
     required this.productDescription,
     required this.productCategory,
     required this.createdAt,
-    this.status = 'cart',
+    required this.status,
+    required this.rentalDuration,
+    required this.cnic,
+    this.startDate,
+    this.endDate,
   });
 
   Map<String, dynamic> toMap() {
@@ -36,6 +45,10 @@ class Order {
       'productCategory': productCategory,
       'createdAt': Timestamp.fromDate(createdAt),
       'status': status,
+      'rentalDuration': rentalDuration,
+      'cnic': cnic,
+      'startDate': startDate != null ? Timestamp.fromDate(startDate!) : null,
+      'endDate': endDate != null ? Timestamp.fromDate(endDate!) : null,
     };
   }
 
@@ -50,7 +63,17 @@ class Order {
       productDescription: map['productDescription'] ?? '',
       productCategory: map['productCategory'] ?? '',
       createdAt: (map['createdAt'] as Timestamp).toDate(),
-      status: map['status'] ?? 'cart',
+      status: map['status'] ?? 'pending',
+      rentalDuration: map['rentalDuration'] ?? 1,
+      cnic: map['cnic'] ?? '',
+      startDate:
+          map['startDate'] != null
+              ? (map['startDate'] as Timestamp).toDate()
+              : null,
+      endDate:
+          map['endDate'] != null
+              ? (map['endDate'] as Timestamp).toDate()
+              : null,
     );
   }
 }
