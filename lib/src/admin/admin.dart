@@ -90,6 +90,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   int _totalUsers = 0;
   int _totalOrders = 0;
   int _totalProducts = 0;
+  int _totalCategories = 0;
   double _totalRevenue = 0.0;
   List<double> _chartData = List.filled(7, 0); // Generic chart data
   List<Map<String, dynamic>> _recentActivities = [];
@@ -131,6 +132,13 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 .count()
                 .get();
         _totalProducts = productsSnapshot.count ?? 0;
+
+        final categoriesSnapshot =
+            await FirebaseFirestore.instance
+                .collection('categories')
+                .count()
+                .get();
+        _totalCategories = categoriesSnapshot.count ?? 0;
 
         final revenueSnapshot =
             await FirebaseFirestore.instance
@@ -320,9 +328,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         'hover': false,
       },
       {
-        'icon': Icons.monetization_on_outlined,
-        'label': 'Revenue',
-        'value': 'Rs.${_totalRevenue.toStringAsFixed(0)}',
+        'icon': Icons.category_outlined,
+        'label': 'Total Categories',
+        'value': _totalCategories.toString(),
         'color': const Color(0xFFF59E0B),
         'bgColor': const Color(0xFFFEF3C7),
         'darkBgColor': const Color(0xFF92400E),
@@ -353,7 +361,6 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSearchBar(),
                           const SizedBox(height: 20),
                           _buildStatsGrid(stats),
                           const SizedBox(height: 25),
@@ -433,39 +440,6 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSearchBar() {
-    return FadeTransition(
-      opacity: _animationController,
-      child: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: TextField(
-          decoration: InputDecoration(
-            hintText: 'Search...',
-            prefixIcon: const Icon(Icons.search, color: Color(0xFF6B7280)),
-            filled: true,
-            fillColor: Theme.of(context).cardColor,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildStatsGrid(List<Map<String, dynamic>> stats) {
     return AnimatedBuilder(
       animation: _animationController,
@@ -473,11 +447,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 200,
             mainAxisSpacing: 16,
-            childAspectRatio: 1.2,
+            crossAxisSpacing: 16,
+            childAspectRatio: 0.95,
           ),
           itemCount: stats.length,
           itemBuilder: (context, index) {
@@ -506,7 +480,6 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   }
 
   Widget _buildStatCard(Map<String, dynamic> stat, int index) {
-    final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 600 + (index * 100)),
       tween: Tween(begin: 0.0, end: 1.0),
@@ -520,7 +493,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(20),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(20),
@@ -528,55 +501,58 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 10,
-                      offset: Offset(0, 4),
+                      offset: const Offset(0, 4),
                     ),
                   ],
+                  border: Border(
+                    left: BorderSide(color: stat['color'] as Color, width: 4),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: (stat['color'] as Color).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(stat['icon'], color: stat['color'], size: 22),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
+                        Text(
+                          stat['label'],
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyLarge?.copyWith(
                             color:
-                                isDarkTheme
-                                    ? (stat['darkBgColor'] as Color)
-                                    : (stat['bgColor'] as Color),
-                            borderRadius: BorderRadius.circular(12),
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[300]
+                                    : Colors.grey[700],
+                            fontWeight: FontWeight.w500,
                           ),
-                          child: Icon(
-                            stat['icon'],
-                            color: stat['color'],
-                            size: 24,
+                        ),
+                        const SizedBox(height: 4),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            stat['value'].toString(),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : const Color(0xFF1F2937),
+                            ),
                           ),
                         ),
                       ],
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      stat['value'].toString(),
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white
-                                : const Color(0xFF1F2937),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      stat['label'],
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey[400]
-                                : Colors.grey[600],
-                      ),
                     ),
                   ],
                 ),
