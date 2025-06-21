@@ -1,7 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:rent_hive_app/src/Registration/login.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
+
+  Future<void> _logout(BuildContext context) async {
+    // Show confirmation dialog
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Logout'),
+            content: const Text('Are you sure you want to logout?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Logout'),
+              ),
+            ],
+          ),
+    );
+
+    if (shouldLogout ?? false) {
+      try {
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (context) => const Center(child: CircularProgressIndicator()),
+        );
+
+        await FirebaseAuth.instance.signOut();
+
+        // await GoogleSignIn().signOut();
+
+        await LoginPage.clearSavedCredentials();
+
+        if (context.mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context);
+          print(e.toString());
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Logout failed: ${e.toString()}')),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +136,7 @@ class AppDrawer extends StatelessWidget {
             _buildDrawerItem(
               icon: Icons.logout,
               title: 'Logout',
-              onTap: () => Navigator.pop(context),
+              onTap: () => _logout(context),
             ),
           ],
         ),
