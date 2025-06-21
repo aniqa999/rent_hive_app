@@ -90,7 +90,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   int _totalUsers = 0;
   int _totalOrders = 0;
   int _totalProducts = 0;
+<<<<<<< HEAD
   int _totalCategories = 0; // Changed from _totalRevenue to _totalCategories
+=======
+  int _totalCategories = 0;
+  double _totalRevenue = 0.0;
+>>>>>>> ccb4fd417d87158b2667e9100efbf2687b4e6e01
   List<double> _chartData = List.filled(7, 0); // Generic chart data
   List<Map<String, dynamic>> _recentActivities = [];
 
@@ -133,6 +138,16 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         _totalProducts = productsSnapshot.count ?? 0;
 
         final categoriesSnapshot =
+<<<<<<< HEAD
+=======
+            await FirebaseFirestore.instance
+                .collection('categories')
+                .count()
+                .get();
+        _totalCategories = categoriesSnapshot.count ?? 0;
+
+        final revenueSnapshot =
+>>>>>>> ccb4fd417d87158b2667e9100efbf2687b4e6e01
             await FirebaseFirestore.instance
                 .collection('categories')
                 .count()
@@ -333,7 +348,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       },
       {
         'icon': Icons.category_outlined,
+<<<<<<< HEAD
         'label': 'Categories',
+=======
+        'label': 'Total Categories',
+>>>>>>> ccb4fd417d87158b2667e9100efbf2687b4e6e01
         'value': _totalCategories.toString(),
         'color': const Color(0xFFF59E0B),
         'bgColor': const Color(0xFFFEF3C7),
@@ -370,6 +389,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+<<<<<<< HEAD
+=======
+                          const SizedBox(height: 20),
+>>>>>>> ccb4fd417d87158b2667e9100efbf2687b4e6e01
                           _buildStatsGrid(stats),
                           const SizedBox(height: 25),
                           _buildChartSection(),
@@ -417,6 +440,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     );
   }
 
+<<<<<<< HEAD
   // Widget _buildSearchBar() {
   //   return FadeTransition(
   //     opacity: _animationController,
@@ -450,6 +474,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   //   );
   // }
 
+=======
+>>>>>>> ccb4fd417d87158b2667e9100efbf2687b4e6e01
   Widget _buildStatsGrid(List<Map<String, dynamic>> stats) {
     return AnimatedBuilder(
       animation: _animationController,
@@ -457,11 +483,15 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 200,
             mainAxisSpacing: 16,
+<<<<<<< HEAD
             childAspectRatio: 0.9,
+=======
+            crossAxisSpacing: 16,
+            childAspectRatio: 0.95,
+>>>>>>> ccb4fd417d87158b2667e9100efbf2687b4e6e01
           ),
           itemCount: stats.length,
           itemBuilder: (context, index) {
@@ -490,7 +520,6 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   }
 
   Widget _buildStatCard(Map<String, dynamic> stat, int index) {
-    final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 600 + (index * 100)),
       tween: Tween(begin: 0.0, end: 1.0),
@@ -504,7 +533,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(20),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -534,13 +563,26 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       offset: const Offset(0, 4),
                     ),
                   ],
+                  border: Border(
+                    left: BorderSide(color: stat['color'] as Color, width: 4),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: (stat['color'] as Color).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(stat['icon'], color: stat['color'], size: 22),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+<<<<<<< HEAD
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -584,11 +626,40 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                       .first,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
+=======
+                        Text(
+                          stat['label'],
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyLarge?.copyWith(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.grey[300]
+                                    : Colors.grey[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            stat['value'].toString(),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : const Color(0xFF1F2937),
+>>>>>>> ccb4fd417d87158b2667e9100efbf2687b4e6e01
                             ),
                           ),
                         ),
                       ],
                     ),
+<<<<<<< HEAD
                     const SizedBox(height: 16),
                     Flexible(
                       child: Text(
@@ -619,6 +690,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+=======
+>>>>>>> ccb4fd417d87158b2667e9100efbf2687b4e6e01
                   ],
                 ),
               ),

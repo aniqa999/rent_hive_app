@@ -45,7 +45,15 @@ dependencies:
   firebase_storage: ^12.0.0
   fl_chart: ^1.0.0
   image_picker: ^1.1.2
+<<<<<<< HEAD
   google_sign_in: ^6.1.6
+=======
+  flutter_dotenv: ^5.2.1
+  shared_preferences: ^2.5.3
+  emailjs: ^4.0.0
+  google_sign_in: ^6.3.0
+  flutter_stripe: ^11.5.0
+>>>>>>> ccb4fd417d87158b2667e9100efbf2687b4e6e01
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +82,7 @@ flutter:
     - assets/categoryIcons/
     - assets/background.png
     - assets/Images/shopping.svg
+<<<<<<< HEAD
     - assets/wear.JPG
     - assets/partywaer.JPG
     - assets/party waer.JPG
@@ -85,6 +94,10 @@ flutter:
     - assets/carss.JPG
     - assets/cars.JPG
     - assets/Car.JPG
+=======
+    - assets/Images/rentHive.jpg
+    - .env
+>>>>>>> ccb4fd417d87158b2667e9100efbf2687b4e6e01
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

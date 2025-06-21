@@ -9,123 +9,166 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Container(
-          width: double.infinity,
-          height: MediaQuery.of(context).size.height,
-          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 50),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              Column(
-                children: <Widget>[
-                  FadeInUp(
-                    duration: Duration(milliseconds: 1000),
-                    child: Text(
-                      "Welcome",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 30,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  FadeInUp(
-                    duration: Duration(milliseconds: 1200),
-                    child: Text(
-                      "Automatic identity verification which enables you to verify your identity",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[700], fontSize: 15),
-                    ),
-                  ),
-                ],
-              ),
-              FadeInUp(
-                duration: Duration(milliseconds: 1400),
-                child: Container(
-                  height: MediaQuery.of(context).size.height / 3,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: NetworkImage(
-                        'https://cdni.iconscout.com/illustration/premium/thumb/login-security-illustration-download-in-svg-png-gif-file-formats--account-secure-user-pack-files-folders-illustrations-7271013.png?f=webp',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Column(
-                children: <Widget>[
-                  FadeInUp(
-                    duration: Duration(milliseconds: 1500),
-                    child: MaterialButton(
-                      minWidth: double.infinity,
-                      height: 60,
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => LoginPage()),
-                        );
-                      },
-                      color: Colors.deepPurple,
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: Colors.black),
-                        borderRadius: BorderRadius.circular(50),
-                      ),
+      backgroundColor: Colors.deepPurple.shade900, // Force background color
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.deepPurple.shade900,
+              Colors.deepPurple.shade700,
+              Colors.deepPurple.shade500,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Container(
+            width: double.infinity,
+            height: MediaQuery.of(context).size.height,
+            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 50),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Column(
+                  children: <Widget>[
+                    FadeInUp(
+                      duration: Duration(milliseconds: 1000),
                       child: Text(
-                        "Login",
+                        "Welcome to RentHive",
                         style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 32,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 1200),
+                      child: Text(
+                        "Rent anything, anytime. Your ultimate rental marketplace.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                FadeInUp(
+                  duration: Duration(milliseconds: 1400),
+                  child: Container(
+                    height: MediaQuery.of(context).size.height / 3,
+                    child: Center(
+                      child: Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(100),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.2),
+                            width: 2,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.home_work_outlined,
+                          size: 80,
                           color: Colors.white,
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(height: 20),
-                  FadeInUp(
-                    duration: Duration(milliseconds: 1600),
-                    child: Container(
-                      padding: EdgeInsets.only(top: 3, left: 3),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(50),
-                        border: Border(
-                          bottom: BorderSide(color: Colors.white),
-                          top: BorderSide(color: Colors.white),
-                          left: BorderSide(color: Colors.white),
-                          right: BorderSide(color: Colors.white),
-                        ),
-                      ),
-                      child: MaterialButton(
-                        minWidth: double.infinity,
+                ),
+                Column(
+                  children: <Widget>[
+                    FadeInUp(
+                      duration: Duration(milliseconds: 1500),
+                      child: Container(
+                        width: double.infinity,
                         height: 60,
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SignupPage(),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.deepPurple,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
                             ),
-                          );
-                        },
-                        color: Colors.deepPurple,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        child: Text(
-                          "Sign up",
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 18,
-                            color: Colors.white,
+                            elevation: 8,
+                            shadowColor: Colors.black26,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LoginPage(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            "Login",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.deepPurple,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    SizedBox(height: 20),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 1600),
+                      child: Container(
+                        width: double.infinity,
+                        height: 60,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.white, width: 2),
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SignupPage(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            "Sign up",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 30),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 1700),
+                      child: Text(
+                        "© 2024 RentHive. All rights reserved.",
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
